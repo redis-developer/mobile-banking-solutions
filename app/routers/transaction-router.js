@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { redis } from '../om/client.js'
-import { bankTransactionRepository as bankRepo  } from '../om/bankTransaction-repository.js'
+import { bankTransactionRepository as bankRepo } from '../om/bankTransaction-repository.js'
 
 export const transactionRouter = Router()
 
@@ -23,6 +23,12 @@ transactionRouter.get('/balance', async (req, res) => {
       'y': entry.value
     }
   })
+
+  let session = req.session
+  if (session && session.userid && balancePayload.length) {
+    session.currentBalanceAmount = balancePayload[balancePayload.length - 1];
+  }
+
   res.send(balancePayload)
 })
 
@@ -33,13 +39,13 @@ transactionRouter.get('/biggestspenders', async (req, res) => {
   let labels = []
 
   range
-    .slice(0,5)
+    .slice(0, 5)
     .forEach((spender) => {
-    series.push(parseFloat(spender.score.toFixed(2)))
-    labels.push(spender.value)
-  })
+      series.push(parseFloat(spender.score.toFixed(2)))
+      labels.push(spender.value)
+    })
 
-  res.send({series, labels})
+  res.send({ series, labels })
 
 })
 
@@ -49,12 +55,12 @@ transactionRouter.get('/search', async (req, res) => {
 
   let results
 
-  if(term.length>=3){
+  if (term.length >= 3) {
     results = await bankRepo.search()
       .where('description').matches(term)
       .or('fromAccountName').matches(term)
       .or('transactionType').equals(term)
-      .return.all({ pageSize: 1000})
+      .return.all({ pageSize: 1000 })
   }
   res.send(results)
 })
@@ -63,6 +69,6 @@ transactionRouter.get('/search', async (req, res) => {
 transactionRouter.get('/transactions', async (req, res) => {
   const transactions = await bankRepo.search()
     .sortBy('transactionDate', 'DESC')
-    .return.all({ pageSize: 10})
+    .return.all({ pageSize: 10 })
   res.send(transactions.slice(0, 10))
 })
